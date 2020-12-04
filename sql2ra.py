@@ -15,20 +15,25 @@ def translate(stmt):
             continue
         else:
             print(token.ttype)
-            if token.ttype in tokens.Keyword or 'WHERE' in token.normalized:
-
+            if token.ttype in tokens.Keyword or 'WHERE' in str(token).upper():
+                if 'where' in str(token):
+                    str_1 = str(token).split("where ")
+                    stmt_dict['WHERE'] = str_1[1]
+                    break
                 stmt_dict[str(token).upper()] = get_keyword_attribute(stmt, token, index)
                 token = str(token).upper()
             index += 1
             print(token)
     print(stmt_dict)
+    #Next Step is to Use this dictionary to make the relational algebra thing
+
 def get_keyword_attribute(stmt,key,index):
     list_items=[]
     for token in stmt.tokens[index+1:]:
         if token.ttype in tokens.Whitespace or 'DISTINCT' == token.normalized:
             continue
         else:
-            if token.ttype not in tokens.Keyword :
+            if token.ttype not in tokens.Keyword:
                 if 'where' in str(token):
                     continue
                 list_items.append(str(token).strip())
@@ -37,4 +42,4 @@ def get_keyword_attribute(stmt,key,index):
                     break
     return list_items
 
-translate("Select distinct * from Person where age = 16")
+translate("Select distinct * from Person, Eats")
