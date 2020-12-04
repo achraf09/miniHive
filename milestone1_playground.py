@@ -81,13 +81,13 @@ print(stmt.tokens[0])
 # print(expected)
 #for token in flat_tokens:
 #    if token select and
-def defin_cross_product(n):
+def defin_cross_product(n,tables):
     if n == 0:
         return radb.ast.RelRef(tables[0])
     if n == 1:
         return radb.ast.Cross(radb.ast.RelRef(tables[0]), radb.ast.RelRef(tables[1]))
     else:
-        return radb.ast.Cross(defin_cross_product(n-1), radb.ast.RelRef(tables[n]))
+        return radb.ast.Cross(defin_cross_product(n-1,tables), radb.ast.RelRef(tables[n]))
 
 stmt_dict = {'SELECT': ['*'], 'FROM': ['Person', 'Eats', 'Pizza','Serves','Pizzeria']}
 if stmt_dict.get('SELECT')[0] == '*':
@@ -96,7 +96,7 @@ if stmt_dict.get('SELECT')[0] == '*':
         if len(tables) == 1:
             input_ = radb.ast.RelRef(tables[0])
         else:
-            input_ = defin_cross_product(len(tables)-1)
+            input_ = defin_cross_product(len(tables)-1,tables)
     else:
         cond = stmt_dict.get('WHERE');
 
