@@ -89,7 +89,7 @@ def defin_cross_product(n,tables):
     else:
         return radb.ast.Cross(defin_cross_product(n-1,tables), radb.ast.RelRef(tables[n]))
 
-stmt_dict = {'SELECT': ['*'], 'FROM': ['Person', 'Eats', 'Pizza','Serves','Pizzeria']}
+stmt_dict = {'SELECT': ['*'], 'FROM': ['Person', 'Eats', 'Pizza','Serves','Pizzeria'], 'WHERE':['age = 16']}
 if stmt_dict.get('SELECT')[0] == '*':
     if 'WHERE' not in stmt_dict.keys():
         tables = stmt_dict.get('FROM');
@@ -98,9 +98,10 @@ if stmt_dict.get('SELECT')[0] == '*':
         else:
             input_ = defin_cross_product(len(tables)-1,tables)
     else:
-        cond = stmt_dict.get('WHERE');
+        where_stmt = str(stmt_dict.get('WHERE'))
 
-
-print(input_)
+expected = radb.parse.one_statement_from_string("\select_{Person.name = Eats.name} Person;")
+print(expected)
+#print(input_)
 
 
