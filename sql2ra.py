@@ -66,11 +66,32 @@ def get_keyword_attribute(stmt, key, index):#Function that groups each Keyword w
 
 def define_cross_product(n, tables): #construct cross products from From-Clause
     if n == 0:
-        return radb.ast.RelRef(tables[0])
+        if ' ' in tables[0]:
+            c = re.split(' ', tables[0])
+            return radb.ast.Rename(c[1], None, radb.ast.RelRef(c[0]))
+        else:
+            return radb.ast.RelRef(tables[0])
     if n == 1:
-        return radb.ast.Cross(radb.ast.RelRef(tables[0]), radb.ast.RelRef(tables[1]))
+        if ' ' in tables[0]:
+            c = re.split(' ', tables[0])
+            if ' ' in tables[1]:
+                c0 = re.split(' ', tables[1])
+                return radb.ast.Cross((radb.ast.Rename(c[1], None, radb.ast.RelRef(c[0]))),(radb.ast.Rename(c0[1], None, radb.ast.RelRef(c0[0]))))
+            else:
+                return radb.ast.Cross(radb.ast.Rename(c[1], None, radb.ast.RelRef(c[0])),radb.ast.RelRef(tables[1]))
+        if ' ' not in tables[0]:
+            if ' ' in tables[1]:
+                c0 = re.split(' ', tables[1])
+                return radb.ast.Cross(radb.ast.RelRef(tables[0]),(radb.ast.Rename(c0[1], None, radb.ast.RelRef(c0[0]))))
+#            return radb.ast.Cross((),())radb.ast.Rename(c[1], None, radb.ast.RelRef(c[0]))
+            else:
+                return radb.ast.Cross(radb.ast.RelRef(tables[0]), radb.ast.RelRef(tables[1]))
     else:
-        return radb.ast.Cross(define_cross_product(n - 1, tables), radb.ast.RelRef(tables[n]))
+        if ' ' in tables[n]:
+            c = re.split(' ',tables[n])
+            return radb.ast.Cross(define_cross_product(n - 1, tables), radb.ast.Rename(c[1], None, radb.ast.RelRef(c[0])))
+        else:
+            return radb.ast.Cross(define_cross_product(n - 1, tables), radb.ast.RelRef(tables[n]))
 
 def get_where_conditions_as_list(str_):#return list of where conditions as a list of items
     str_ = str_.split('and')

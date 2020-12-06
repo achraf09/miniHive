@@ -6,7 +6,7 @@ import radb.ast
 import radb.parse
 from sqlparse import tokens
 import sys
-
+import re
 import sql2ra
 sys.setrecursionlimit(1500)
 # def sql_tokenize(string):
@@ -101,9 +101,14 @@ def defin_cross_product(n,tables):
 #         where_stmt = str(stmt_dict.get('WHERE'))
 
 print("###########################")
-rastring="\project_{Person.name, pizzeria}(\select_{Person.name = Eats.name and Eats.pizza = Serves.pizza}((Person \cross Eats) \cross Serves));"
-sqlstmt="select distinct Person.name, pizzeria from Person, Eats, Serves where Person.name = Eats.name and Eats.pizza = Serves.pizza"
+rastring="\project_{A.name, B.name}(\select_{A.pizza = B.pizza}(\\rename_{A: *} Eats \cross \\rename_{B: *} Eats));"
+sqlstmt="select distinct A.name, B.name from Eats A, Eats B where A.pizza = B.pizza"
 expected = radb.parse.one_statement_from_string(rastring)
+ren = radb.ast.Rename('A', None, radb.ast.RelRef('Person'))
+print(ren)
+st= "Person A"
+str_1 = re.split(' ', str(st))
+print(str_1)
 stmt = sqlparse.parse(sqlstmt)[0]
 actual = sql2ra.translate(stmt)
 print(str(expected) == str(actual))
