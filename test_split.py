@@ -6,7 +6,7 @@ import radb
 import radb.ast
 import radb.parse
 from sqlparse import tokens
-str_ = "age=16 and Person.name='f'"
+str_ = "age=16"
 str_ = str_.split('and')
 str_1=[]
 for st in str_:
@@ -63,5 +63,11 @@ def extract_cond(l,cond):
                     return radb.ast.ValExprBinaryOp(extract_cond(l-2,cond),radb.ast.sym.AND , radb.ast.ValExprBinaryOp(radb.ast.AttrRef(None,cond[l-1]),radb.ast.sym.EQ,radb.ast.RANumber(cond[l])))
 
 
-conds = extract_cond(len(stripped_str)-1,stripped_str)
-print(conds)
+#conds = extract_cond(len(stripped_str)-1,stripped_str)
+#print(conds)
+###########################################################################################################
+expected = radb.parse.one_statement_from_string("\project_{Person.name}(\select_{Person.name = Eats.name}(Person \cross Eats));")
+print(expected)
+list_=[radb.ast.AttrRef(None, 'age'), radb.ast.AttrRef('Person','age')]
+wew = radb.ast.Select(radb.ast.ValExprBinaryOp(radb.ast.AttrRef(None, 'age'), radb.ast.sym.EQ, radb.ast.RANumber('16')),radb.ast.Cross(radb.ast.RelRef('Person'),radb.ast.RelRef('Eats')))
+print(wew)

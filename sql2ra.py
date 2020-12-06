@@ -9,13 +9,11 @@ stmt_dict = {}
 
 def translate(stmt):
     index = 0
-    stmt = sqlparse.parse(stmt)[0]
     for token in stmt.tokens:
         if token.ttype in tokens.Whitespace or 'DISTINCT' == token.normalized:
             index += 1
             continue
         else:
-            print(token.ttype)
             if token.ttype in tokens.Keyword or 'WHERE' in str(token).upper():
                 if 'WHERE' in str(token).upper():
                     str_1 = str(token).split("where ")
@@ -24,9 +22,28 @@ def translate(stmt):
                 stmt_dict[str(token).upper()] = get_keyword_attribute(stmt, token, index)
                 token = str(token).upper()
             index += 1
-            print(token)
-    print(stmt_dict)
+    tables = stmt_dict.get('FROM');
+    cross = define_cross_product(len(tables) - 1, tables)
     # Next Step is to Use this dictionary to make the relational algebra thing
+    if stmt_dict.get('SELECT')[0] == '*':
+        if 'WHERE' not in stmt_dict.keys():
+            result = cross
+        else:
+            stripped_str= get_where_conditions_as_list(stmt_dict.get('WHERE'))
+            cond = extract_cond(len(stripped_str) - 1, stripped_str)
+            result = define_select_with_cross(cond, cross)
+    else:
+        list_projections = extract_projection(stmt_dict.get('SELECT'))
+        if 'WHERE' not in stmt_dict.keys():
+            result = define_projection_with_cross(list_projections,cross)
+        else:
+            stripped_str = get_where_conditions_as_list(stmt_dict.get('WHERE'))
+            cond = extract_cond(len(stripped_str) - 1, stripped_str)
+            select = define_select_with_cross(cond, cross)
+            result = define_projection_with_cross(list_projections,select)
+    return result
+
+
 
 
 def get_keyword_attribute(stmt, key, index):#Function that groups each Keyword with corresponding attributes
@@ -38,7 +55,8 @@ def get_keyword_attribute(stmt, key, index):#Function that groups each Keyword w
             if token.ttype not in tokens.Keyword:
                 if 'WHERE' in str(token).upper():
                     continue
-                list_items.append(str(token).strip())
+                st = str(token).split(', ')
+                list_items.extend(st)
             else:
                 if token.ttype in tokens.Keyword:
                     break
@@ -59,20 +77,16 @@ def get_where_conditions_as_list(str_):#return list of where conditions as a lis
     for st in str_:
         st.strip(' ')
         if '=' in st:
-            str_1 += re.split('(\W+)=', str(st))
-            # for s in str_1:
-            print(str_1)
+            str_1 += re.split('=', str(st))
             # str_1=[]
-        if '<' in st:
-            str_1 = re.split('(\W+)<', str(st))
-            print(str_1)
-            str_1 = []
+        # if '<' in st:
+        #     str_1 = re.split('(\W+)<', str(st))
+        #     str_1 = []
     stripped_str = []
     for st in str_1:
         if st == ' ':
             continue
         st = st.strip()
-        print(st)
         stripped_str.append(st)
     return stripped_str
 
@@ -106,4 +120,29 @@ def extract_cond(l,cond): #create the select condition from the where statement
                     return radb.ast.ValExprBinaryOp(extract_cond(l-2,cond),radb.ast.sym.AND , radb.ast.ValExprBinaryOp(radb.ast.AttrRef(None,cond[l-1]),radb.ast.sym.EQ,radb.ast.RANumber(cond[l])))
 
 
-translate("Select distinct * from Person, Eats where age=16 and Person.gender='f'")
+def extract_projection(proj_list):###Get the projection names and prepare them for the function that gathers them with the crosses
+    list_projection=[]
+    if isinstance(proj_list, str):
+        if '.' in proj_list:
+            p = re.split('\.',proj_list)
+            list_projection.extend(radb.ast.AttrRef(p[0],p[1]))
+        else:
+            list_projection.extend(radb.ast.AttrRef(None, proj_list))
+    else:
+        for item in proj_list:
+            if '.' in item:
+                p = re.split('\.', item)
+                list_projection.append(radb.ast.AttrRef(p[0], p[1]))
+            else:
+                list_projection.append(radb.ast.AttrRef(None, item))
+
+    return list_projection
+
+
+def define_projection_with_cross(list_projection, cross):###Function that gathers projection with crosses
+    return radb.ast.Project(list_projection, cross)
+
+
+def define_select_with_cross(list_cond, cross):
+    return radb.ast.Select(list_cond,cross)
+

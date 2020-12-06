@@ -7,7 +7,7 @@ import radb.parse
 from sqlparse import tokens
 import sys
 
-
+import sql2ra
 sys.setrecursionlimit(1500)
 # def sql_tokenize(string):
 #     """ Tokenizes a SQL statement into tokens.
@@ -89,19 +89,23 @@ def defin_cross_product(n,tables):
     else:
         return radb.ast.Cross(defin_cross_product(n-1,tables), radb.ast.RelRef(tables[n]))
 
-stmt_dict = {'SELECT': ['*'], 'FROM': ['Person', 'Eats', 'Pizza','Serves','Pizzeria'], 'WHERE':['age = 16']}
-if stmt_dict.get('SELECT')[0] == '*':
-    if 'WHERE' not in stmt_dict.keys():
-        tables = stmt_dict.get('FROM');
-        if len(tables) == 1:
-            input_ = radb.ast.RelRef(tables[0])
-        else:
-            input_ = defin_cross_product(len(tables)-1,tables)
-    else:
-        where_stmt = str(stmt_dict.get('WHERE'))
+# stmt_dict = {'SELECT': ['*'], 'FROM': ['Person', 'Eats', 'Pizza','Serves','Pizzeria'], 'WHERE':['age = 16']}
+# if stmt_dict.get('SELECT')[0] == '*':
+#     if 'WHERE' not in stmt_dict.keys():
+#         tables = stmt_dict.get('FROM');
+#         if len(tables) == 1:
+#             input_ = radb.ast.RelRef(tables[0])
+#         else:
+#             input_ = defin_cross_product(len(tables)-1,tables)
+#     else:
+#         where_stmt = str(stmt_dict.get('WHERE'))
 
-expected = radb.parse.one_statement_from_string("\select_{Person.name = Eats.name} Person;")
-print(expected)
-#print(input_)
+print("###########################")
+rastring="\project_{Person.name, pizzeria}(\select_{Person.name = Eats.name and Eats.pizza = Serves.pizza}((Person \cross Eats) \cross Serves));"
+sqlstmt="select distinct Person.name, pizzeria from Person, Eats, Serves where Person.name = Eats.name and Eats.pizza = Serves.pizza"
+expected = radb.parse.one_statement_from_string(rastring)
+stmt = sqlparse.parse(sqlstmt)[0]
+actual = sql2ra.translate(stmt)
+print(str(expected) == str(actual))
 
 
