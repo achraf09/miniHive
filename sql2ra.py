@@ -6,7 +6,6 @@ from sqlparse import tokens
 import re
 
 
-
 def translate(stmt):
     index = 0
     stmt_dict = {}
@@ -17,7 +16,7 @@ def translate(stmt):
         else:
             if token.ttype in tokens.Keyword or 'WHERE' in str(token).upper():
                 if 'WHERE' in str(token).upper():
-                    str_1 = str(token).split("where ")
+                    str_1 = re.split("where ", str(token), flags=re.IGNORECASE)
                     stmt_dict['WHERE'] = str_1[1]
                     break
                 stmt_dict[str(token).upper()] = get_keyword_attribute(stmt, token, index)

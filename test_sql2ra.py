@@ -4,7 +4,6 @@ import radb.parse
 import sql2ra
 import sqlparse
 import unittest
-
 '''
 These tests check the canonical translation of simple SQL statements
 into the relational algebra using the operators selection, projection,

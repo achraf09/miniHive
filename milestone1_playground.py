@@ -102,7 +102,7 @@ def defin_cross_product(n,tables):
 
 print("###########################")
 rastring="\project_{A.name, B.name}(\select_{A.pizza = B.pizza}(\\rename_{A: *} Eats \cross \\rename_{B: *} Eats));"
-sqlstmt="select distinct A.name, B.name from Eats A, Eats B where A.pizza = B.pizza"
+sqlstmt="selEct distinct * FRom Person X, Eats WHere age=16"
 expected = radb.parse.one_statement_from_string(rastring)
 ren = radb.ast.Rename('A', None, radb.ast.RelRef('Person'))
 print(ren)
@@ -111,6 +111,8 @@ str_1 = re.split(' ', str(st))
 print(str_1)
 stmt = sqlparse.parse(sqlstmt)[0]
 actual = sql2ra.translate(stmt)
+print(type(actual))
+print(actual)
 print(str(expected) == str(actual))
 
 
