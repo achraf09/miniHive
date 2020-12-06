@@ -4,11 +4,12 @@ import radb.ast
 import radb.parse
 from sqlparse import tokens
 import re
-stmt_dict = {}
+
 
 
 def translate(stmt):
     index = 0
+    stmt_dict = {}
     for token in stmt.tokens:
         if token.ttype in tokens.Whitespace or 'DISTINCT' == token.normalized:
             index += 1
