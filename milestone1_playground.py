@@ -101,18 +101,69 @@ def defin_cross_product(n,tables):
 #         where_stmt = str(stmt_dict.get('WHERE'))
 
 print("###########################")
-rastring="\project_{A.name, B.name}(\select_{A.pizza = B.pizza}(\\rename_{A: *} Eats \cross \\rename_{B: *} Eats));"
+rastring="\project_{name}(\select_{gender='f' and age=16}(Person));"
 sqlstmt="selEct distinct * FRom Person X, Eats WHere age=16"
-expected = radb.parse.one_statement_from_string(rastring)
-ren = radb.ast.Rename('A', None, radb.ast.RelRef('Person'))
-print(ren)
-st= "Person A"
-str_1 = re.split(' ', str(st))
-print(str_1)
-stmt = sqlparse.parse(sqlstmt)[0]
+expected1 = radb.parse.one_statement_from_string("\select_{Person.gender = 'f'}(Person);")
+expected2 = radb.parse.one_statement_from_string("\select_{Person.gender = 'f' and age=16}(Person);")
+expected3 = radb.parse.one_statement_from_string("\select_{Person.gender = 'f' and age=16 and Person.name='Ben'}(Person);")
+expected4 = radb.parse.one_statement_from_string("\select_{Person.gender = 'f'} (\select_{Person.age = 16} (\select_{Person.name='Ben'} Person));")
+print(expected2)
+testSelect = radb.ast.Select(radb.ast.ValExprBinaryOp(radb.ast.AttrRef(None,'age'),radb.ast.sym.EQ,radb.ast.RANumber('16')),radb.ast.Select(radb.ast.ValExprBinaryOp(radb.ast.AttrRef(None,'name'),radb.ast.sym.EQ,radb.ast.RAString('f')),radb.ast.RelRef('Person')))
+print(testSelect)
+#ren = radb.ast.Rename('A', None, radb.ast.RelRef('Person'))
+
+#print(ren)
+#st= "Person A"
+#str_1 = re.split(' ', str(st))
+#print(str_1)
+stmt = sqlparse.parse("Select * From Eats  Where E.pizza = 'mushroom' and E.price = 10")[0]
 actual = sql2ra.translate(stmt)
-print(type(actual))
+#ra = radb.ast.Select(actual.cond.inputs[0],radb.ast.Select(actual.cond.inputs[1],actual.inputs[0]))
+#print(type(actual.cond.inputs[0]) == radb.ast.ValExprBinaryOp)
+#print(len(actual.inputs))
+def rule_selection_split(ra):
+     visited=[]
+     if isinstance(ra, radb.ast.Select):
+         rule_selection_split_help(ra.cond,visited)
+         sel = rule_selection_spilt_building(visited,ra.inputs[0])
+     else:
+         if isinstance(ra,radb.ast.Project):
+             rule_selection_split_help(ra.inputs[0].cond,visited)
+             sel = radb.ast.Project(ra.attrs,rule_selection_spilt_building(visited,ra.inputs[0].inputs[0]))
+     return sel
+
+
+def rule_selection_spilt_building(ra,inputs):
+    if len(ra) > 1:
+        return radb.ast.Select(ra.pop(0),rule_selection_spilt_building(ra,inputs))
+    else:
+        return radb.ast.Select(ra[0],inputs)
+#    if n==0:
+#        return radb.ast.Select(ra[n],inputs[0])
+#    else:
+#        l=radb.ast.Select(ra[n-1],inputs[0])
+#        return radb.ast.Select(rule_selection_spilt_building(ra,n-2,inputs),radb.ast.Select(ra[n-1],inputs[0]))
+
+
+def rule_selection_split_help(ra,visited):
+    if isinstance(ra.inputs[0],radb.ast.AttrRef):
+        visited.append(ra)
+        return
+    rule_selection_split_help(ra.inputs[0],visited)
+    rule_selection_split_help(ra.inputs[1],visited)
+# # while ra.cond.inputs[0] != radb.ast.AttrRef:
+# #     if
+# print(isinstance(actual.cond.inputs[0].inputs[1],radb.ast.ValExprBinaryOp))
+# print(actual.cond.inputs[0].inputs[0].inputs[0])
+# print(actual.to_json())
+#visited=[]
 print(actual)
-print(str(expected) == str(actual))
+##############################################
+ra1= rule_selection_split(actual)
+print(ra1)
+#print(type(actual))
+#print(paren(actual.cond.inputs[0]))
+#print(ra)
+#print(str(expected) == str(actual))
 
 
