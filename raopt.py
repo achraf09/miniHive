@@ -11,6 +11,14 @@ def rule_break_up_selections(ra):
         if isinstance(ra, radb.ast.Project):
             rule_selection_split_help(ra.inputs[0].cond, visited)
             sel = radb.ast.Project(ra.attrs, rule_selection_spilt_building(visited, ra.inputs[0].inputs[0]))
+        else:
+            if isinstance(ra,radb.ast.Cross):
+                if isinstance(ra.inputs[0], radb.ast.Select):
+                    rule_selection_split_help(ra.inputs[0].cond,visited)
+                    sel = radb.ast.Cross(rule_selection_spilt_building(visited,ra.inputs[0].inputs[0]),ra.inputs[1])
+                else:
+                    rule_selection_split_help(ra.inputs[1].cond,visited)
+                    sel = radb.ast.Cross(ra.inputs[0], rule_selection_spilt_building(visited,ra.inputs[1].inputs[0]))
     return sel
 
 

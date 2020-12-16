@@ -105,8 +105,8 @@ rastring="\project_{name}(\select_{gender='f' and age=16}(Person));"
 sqlstmt="selEct distinct * FRom Person X, Eats WHere age=16"
 expected1 = radb.parse.one_statement_from_string("\select_{Person.gender = 'f'}(Person);")
 expected2 = radb.parse.one_statement_from_string("\select_{Person.gender = 'f' and age=16}(Person);")
-expected3 = radb.parse.one_statement_from_string("\select_{Person.gender = 'f' and age=16 and Person.name='Ben'}(Person);")
-expected4 = radb.parse.one_statement_from_string("\select_{Person.gender = 'f'} (\select_{Person.age = 16} (\select_{Person.name='Ben'} Person));")
+expected3 = radb.parse.one_statement_from_string("\select_{Person.gender='f' and Person.age=16}(Person) \cross Eats;")
+expected4 = radb.parse.one_statement_from_string("\select_{Person.gender = 'f'} (\select_{Person.age = 16} Person) \cross Eats;")
 print(expected2)
 testSelect = radb.ast.Select(radb.ast.ValExprBinaryOp(radb.ast.AttrRef(None,'age'),radb.ast.sym.EQ,radb.ast.RANumber('16')),radb.ast.Select(radb.ast.ValExprBinaryOp(radb.ast.AttrRef(None,'name'),radb.ast.sym.EQ,radb.ast.RAString('f')),radb.ast.RelRef('Person')))
 print(testSelect)
