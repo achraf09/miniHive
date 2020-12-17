@@ -9,6 +9,7 @@ import sys
 import re
 import sql2ra
 import raopt
+import raopt_ver
 sys.setrecursionlimit(1500)
 # def sql_tokenize(string):
 #     """ Tokenizes a SQL statement into tokens.
@@ -73,66 +74,30 @@ print(test)
 #print(stmt.tokens[-1])
 print("--------------")
 print(stmt.tokens[0])
-#
-# cond = radb.ast.ValExprBinaryOp(radb.ast.AttrRef(None, 'age'), radb.ast.sym.EQ, radb.ast.RANumber('16'))
-# input = radb.ast.RelRef('Person')
-# select = radb.ast.Select(cond, input)
-# expected = radb.parse.one_statement_from_string("Person;")
-# print(select) # Output
-# print(expected)
-#for token in flat_tokens:
-#    if token select and
-def defin_cross_product(n,tables):
-    if n == 0:
-        return radb.ast.RelRef(tables[0])
-    if n == 1:
-        return radb.ast.Cross(radb.ast.RelRef(tables[0]), radb.ast.RelRef(tables[1]))
-    else:
-        return radb.ast.Cross(defin_cross_product(n-1,tables), radb.ast.RelRef(tables[n]))
 
-# stmt_dict = {'SELECT': ['*'], 'FROM': ['Person', 'Eats', 'Pizza','Serves','Pizzeria'], 'WHERE':['age = 16']}
-# if stmt_dict.get('SELECT')[0] == '*':
-#     if 'WHERE' not in stmt_dict.keys():
-#         tables = stmt_dict.get('FROM');
-#         if len(tables) == 1:
-#             input_ = radb.ast.RelRef(tables[0])
-#         else:
-#             input_ = defin_cross_product(len(tables)-1,tables)
-#     else:
-#         where_stmt = str(stmt_dict.get('WHERE'))
+
 
 print("###########################")
 rastring="\project_{name}(\select_{gender='f' and age=16}(Person));"
 sqlstmt="selEct distinct * FRom Person X, Eats WHere age=16"
 expected1 = radb.parse.one_statement_from_string("\select_{Person.gender = 'f'}(Person);")
-expected2 = radb.parse.one_statement_from_string("\select_{Person.gender = 'f' and age=16}(Person);")
-expected3 = radb.parse.one_statement_from_string("\select_{gender = 'm'} (Person \cross Eats);")
-expected4 = radb.parse.one_statement_from_string("\select_{Person.gender = 'f'} (\select_{Person.age = 16} Person) \cross Eats;")
+expected2 = radb.parse.one_statement_from_string("\select_{gender = 'm'} (Person \cross Eats);")
+expected3 = radb.parse.one_statement_from_string("\project_{name}(\select_{gender='f' and age=16} Person);")
+expected4 = radb.parse.one_statement_from_string("\select_{Person.name = 'Amy'} Person \join_{Person.name = Eats.name} Eats;")
 print(expected2)
 testSelect = radb.ast.Select(radb.ast.ValExprBinaryOp(radb.ast.AttrRef(None,'age'),radb.ast.sym.EQ,radb.ast.RANumber('16')),radb.ast.Select(radb.ast.ValExprBinaryOp(radb.ast.AttrRef(None,'name'),radb.ast.sym.EQ,radb.ast.RAString('f')),radb.ast.RelRef('Person')))
 print(testSelect)
-#ren = radb.ast.Rename('A', None, radb.ast.RelRef('Person'))
 
-#print(ren)
-#st= "Person A"
-#str_1 = re.split(' ', str(st))
-#print(str_1)
-#stmt = sqlparse.parse("\select_{E.pizza = 'mushroom' and E.price < 10} \\rename_{E: *}(Eats);")[0]
-stmt = sqlparse.parse("SELECT DISTINCT CUSTOMER.C_CUSTKEY FROM CUSTOMER, NATION, REGION WHERE CUSTOMER.C_NATIONKEY = NATION.N_NATIONKEY AND NATION.N_REGIONKEY = REGION.R_REGIONKEY")[0]
-actual = sql2ra.translate(stmt)
-#ra = radb.ast.Select(actual.cond.inputs[0],radb.ast.Select(actual.cond.inputs[1],actual.inputs[0]))
-#print(type(actual.cond.inputs[0]) == radb.ast.ValExprBinaryOp)
-#print(len(actual.inputs))
 def rule_selection_split(ra):
-     visited=[]
-     if isinstance(ra, radb.ast.Select):
-         rule_selection_split_help(ra.cond,visited)
-         sel = rule_selection_spilt_building(visited,ra.inputs[0])
-     else:
-         if isinstance(ra,radb.ast.Project):
-             rule_selection_split_help(ra.inputs[0].cond,visited)
-             sel = radb.ast.Project(ra.attrs,rule_selection_spilt_building(visited,ra.inputs[0].inputs[0]))
-     return sel
+    visited=[]
+    if isinstance(ra, radb.ast.Select):
+        rule_selection_split_help(ra.cond,visited)
+        sel = rule_selection_spilt_building(visited,ra.inputs[0])
+    else:
+        if isinstance(ra,radb.ast.Project):
+            rule_selection_split_help(ra.inputs[0].cond,visited)
+            sel = radb.ast.Project(ra.attrs,rule_selection_spilt_building(visited,ra.inputs[0].inputs[0]))
+    return sel
 
 
 def rule_selection_spilt_building(ra,inputs):
@@ -158,11 +123,62 @@ def rule_selection_split_help(ra,visited):
 # print(isinstance(actual.cond.inputs[0].inputs[1],radb.ast.ValExprBinaryOp))
 # print(actual.cond.inputs[0].inputs[0].inputs[0])
 # print(actual.to_json())
-#visited=[]
-print(actual)
-##############################################
-ra1= raopt.rule_break_up_selections(radb.parse.one_statement_from_string("\select_{E.pizza = 'mushroom' and E.price < 10} \\rename_{E: *}(Eats);"))
+visited=[]
+def rule_pushdownselection_help_get_cross(ra,visited):
+    if isinstance(ra.inputs[0], radb.ast.Cross):
+        visited.append(ra.inputs[0])
+        return
+    else:
+        if isinstance(ra.inputs[0], radb.ast.RelRef):
+            visited.append(ra.inputs[0])
+            return
+    rule_pushdownselection_help_get_cross(ra.inputs[0],visited)
+
+def rule_push_down_selections(ra, dd):
+    visited=[]
+    selects = [ra]
+#The thing here is to first elemenate the case where no pushdown selection is possible
+#For e.g. if there is no cross, there is no need for pushing down the selections
+#if there is a cross then we check the selections : if the condition's right part is a constant:
+                                                        # we push it down after the cross before the table where it belongs
+                                                    #if the condition is a attribute on both sides then:
+                                                        # we group the selections that satisfy this case
+    first_cross_relation = None
+    #rule_pushdownselection_help_get_cross(ra,visited)
+    while selects[-1].inputs is not None:
+        inputs = selects[-1].inputs[0]
+        if isinstance(inputs, radb.ast.Select):
+            selects.append(inputs)
+        elif isinstance(inputs, radb.ast.Cross):
+            rule_pushdownselection_help_get_cross(ra,visited)
+            break
+        else:
+            return ra
+
+def rule_selection_split_help(ra,visited):
+    if isinstance(ra.inputs[0],radb.ast.Cross):
+        visited.append(ra)
+        return
+    rule_selection_split_help(ra.inputs[0],visited)
+    rule_selection_split_help(ra.inputs[1],visited)
+
+
+
+dd = {}
+dd["Person"] = {"name": "string", "age": "integer", "gender": "string"}
+dd["Eats"] = {"name": "string", "pizza": "string"}
+dd["Serves"] = {"pizzeria": "string", "pizza": "string", "price": "integer"}
+stmt = sqlparse.parse("SELECT DISTINCT * FROM Eats Eats1, Eats Eats2 Where Eats1.pizza = Eats2.pizza and Eats2.name = 'Amy'")[0]
+actual = sql2ra.translate(stmt)
+ra = raopt.rule_break_up_selections(actual)
+print(dd.keys())
+ra1=raopt.rule_push_down_selections(ra,dd)
+ra2=raopt_ver.rule_introduce_joins(expected3)
 print(ra1)
+print(expected4)
+##############################################
+ra1= raopt.rule_break_up_selections(radb.parse.one_statement_from_string("\\rename_{P: *} Person \cross Eats;"))
+#print(ra1)
 #print(type(actual))
 #print(paren(actual.cond.inputs[0]))
 #print(ra)
