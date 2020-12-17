@@ -298,6 +298,7 @@ def attribute_exists(rels,attrs, dd):
         if str(rel) in rel_cand:
             return True
     return False
+
 # def rule_pushdownselection_help_get_cross(ra,visited):
 #     if isinstance(ra.inputs[0], radb.ast.Cross):
 #         visited.append(ra.inputs[0])
@@ -329,6 +330,9 @@ def name_rel(rel):
         return rel.relname
     else:
         return name_rel(rel.inputs[0])
+
+
+
 
 
 
