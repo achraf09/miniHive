@@ -8,6 +8,7 @@ from sqlparse import tokens
 import sys
 import re
 import sql2ra
+import raopt
 sys.setrecursionlimit(1500)
 # def sql_tokenize(string):
 #     """ Tokenizes a SQL statement into tokens.
@@ -105,7 +106,7 @@ rastring="\project_{name}(\select_{gender='f' and age=16}(Person));"
 sqlstmt="selEct distinct * FRom Person X, Eats WHere age=16"
 expected1 = radb.parse.one_statement_from_string("\select_{Person.gender = 'f'}(Person);")
 expected2 = radb.parse.one_statement_from_string("\select_{Person.gender = 'f' and age=16}(Person);")
-expected3 = radb.parse.one_statement_from_string("\select_{Person.gender='f' and Person.age=16}(Person) \cross Eats;")
+expected3 = radb.parse.one_statement_from_string("\select_{gender = 'm'} (Person \cross Eats);")
 expected4 = radb.parse.one_statement_from_string("\select_{Person.gender = 'f'} (\select_{Person.age = 16} Person) \cross Eats;")
 print(expected2)
 testSelect = radb.ast.Select(radb.ast.ValExprBinaryOp(radb.ast.AttrRef(None,'age'),radb.ast.sym.EQ,radb.ast.RANumber('16')),radb.ast.Select(radb.ast.ValExprBinaryOp(radb.ast.AttrRef(None,'name'),radb.ast.sym.EQ,radb.ast.RAString('f')),radb.ast.RelRef('Person')))
@@ -116,7 +117,8 @@ print(testSelect)
 #st= "Person A"
 #str_1 = re.split(' ', str(st))
 #print(str_1)
-stmt = sqlparse.parse("Select * From Eats  Where E.pizza = 'mushroom' and E.price = 10")[0]
+#stmt = sqlparse.parse("\select_{E.pizza = 'mushroom' and E.price < 10} \\rename_{E: *}(Eats);")[0]
+stmt = sqlparse.parse("SELECT DISTINCT CUSTOMER.C_CUSTKEY FROM CUSTOMER, NATION, REGION WHERE CUSTOMER.C_NATIONKEY = NATION.N_NATIONKEY AND NATION.N_REGIONKEY = REGION.R_REGIONKEY")[0]
 actual = sql2ra.translate(stmt)
 #ra = radb.ast.Select(actual.cond.inputs[0],radb.ast.Select(actual.cond.inputs[1],actual.inputs[0]))
 #print(type(actual.cond.inputs[0]) == radb.ast.ValExprBinaryOp)
@@ -159,7 +161,7 @@ def rule_selection_split_help(ra,visited):
 #visited=[]
 print(actual)
 ##############################################
-ra1= rule_selection_split(actual)
+ra1= raopt.rule_break_up_selections(radb.parse.one_statement_from_string("\select_{E.pizza = 'mushroom' and E.price < 10} \\rename_{E: *}(Eats);"))
 print(ra1)
 #print(type(actual))
 #print(paren(actual.cond.inputs[0]))

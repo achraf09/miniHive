@@ -93,7 +93,8 @@ def define_cross_product(n, tables): #construct cross products from From-Clause
             return radb.ast.Cross(define_cross_product(n - 1, tables), radb.ast.RelRef(tables[n]))
 
 def get_where_conditions_as_list(str_):#return list of where conditions as a list of items
-    str_ = str_.split('and')
+    #str_ = str_.split('and')
+    str_ = re.split("and", str(str_), flags=re.IGNORECASE)
     str_1 = []
     for st in str_:
         st.strip(' ')
@@ -120,7 +121,11 @@ def extract_cond(l,cond): #create the select condition from the where statement
         else:
             if '.' in cond[0] and "'" not in cond[1]:
                 c = re.split('\.', cond[0])
-                return radb.ast.ValExprBinaryOp(radb.ast.AttrRef(c[0], c[1]), radb.ast.sym.EQ, radb.ast.RANumber(cond[1]))
+                if '.' in cond[1]:
+                    p = re.split('\.',cond[1])
+                    return radb.ast.ValExprBinaryOp(radb.ast.AttrRef(c[0],c[1]),radb.ast.sym.EQ,radb.ast.AttrRef(p[0],p[1]))
+                else:
+                    return radb.ast.ValExprBinaryOp(radb.ast.AttrRef(c[0], c[1]), radb.ast.sym.EQ, radb.ast.RANumber(cond[1]))
             else:
                 if '.' not in cond[0] and "'" in cond [1]:
                     return radb.ast.ValExprBinaryOp(radb.ast.AttrRef(None,cond[0]), radb.ast.sym.EQ, radb.ast.RAString(cond[1]))
@@ -133,7 +138,11 @@ def extract_cond(l,cond): #create the select condition from the where statement
         else:
             if '.' in cond[l-1] and "'" not in cond[l]:
                 c = re.split('\.', cond[l-1])
-                return radb.ast.ValExprBinaryOp(extract_cond(l-2,cond),radb.ast.sym.AND , radb.ast.ValExprBinaryOp(radb.ast.AttrRef(c[0], c[1]), radb.ast.sym.EQ, radb.ast.RANumber(cond[l])))
+                if '.' in cond[l]:
+                    p = re.split('\.', cond[l])
+                    return radb.ast.ValExprBinaryOp(extract_cond(l-2,cond),radb.ast.sym.AND, radb.ast.ValExprBinaryOp(radb.ast.AttrRef(c[0], c[1]), radb.ast.sym.EQ, radb.ast.AttrRef(p[0], p[1])))
+                else:
+                    return radb.ast.ValExprBinaryOp(extract_cond(l-2,cond),radb.ast.sym.AND, radb.ast.ValExprBinaryOp(radb.ast.AttrRef(c[0], c[1]), radb.ast.sym.EQ, radb.ast.RANumber(cond[l])))
             else:
                 if '.' not in cond[l-1] and "'" in cond [l]:
                     return radb.ast.ValExprBinaryOp(extract_cond(l-2,cond),radb.ast.sym.AND , radb.ast.ValExprBinaryOp(radb.ast.AttrRef(None,cond[l-1]), radb.ast.sym.EQ, radb.ast.RAString(cond[l])))

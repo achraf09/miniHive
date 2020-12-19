@@ -35,3 +35,17 @@ def rule_selection_split_help(ra, visited):#Function that visits the selection t
         return
     rule_selection_split_help(ra.inputs[0], visited)
     rule_selection_split_help(ra.inputs[1], visited)
+
+
+#def rule_push_down_selections(ra, dd):
+    #The thing here is to first elemenate the case where no pushdown selection is possible
+    #For e.g. if there is no cross, there is no need for pushing down the selections
+    #if there is a cross then we check the selections : if the condition's right part is a constant:
+                                                            # we push it down after the cross before the table where it belongs
+                                                        #if the condition is a attribute on both sides then:
+                                                            # we group the selections that satisfy this case
+
+
+
+
+
